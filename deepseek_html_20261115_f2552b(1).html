@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Русь: Явь и Навь — Демо</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=PT+Sans:wght@400;700&family=Marck+Script&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    background: #0f0e13; font-family: 'PT Sans', sans-serif; color: #2B1B12;
+    overflow: hidden; height: 100vh; display: flex; align-items: center; justify-content: center;
+  }
+  #game-container {
+    position: relative; width: min(1024px, 100vw); height: min(640px, 100vh);
+    background: #F2E4C9; overflow: hidden; box-shadow: 0 0 40px rgba(0,0,0,0.85);
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+  .overlay {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 40px; text-align: center;
+    background: rgba(46, 42, 58, 0.96); color: #F2E4C9; z-index: 10;
+  }
+  .overlay.hidden { display: none; }
+  h1 { font-family: 'PT Serif', serif; font-size: 68px; color: #D9A441;
+       text-shadow: 4px 4px 0 #2B1B12; letter-spacing: 10px; margin-bottom: 6px; }
+  h2 { font-family: 'PT Serif', serif; font-size: 26px; color: #D9A441;
+       margin-bottom: 24px; letter-spacing: 3px; }
+  p { font-family: 'PT Serif', serif; font-size: 20px; line-height: 1.65;
+      max-width: 760px; margin-bottom: 20px; }
+  .btn {
+    font-family: 'PT Sans', sans-serif; font-size: 19px; font-weight: bold;
+    padding: 14px 48px; background: #A63A2A; color: #F2E4C9;
+    border: 3px solid #2B1B12; cursor: pointer; letter-spacing: 3px;
+    transition: all 0.15s; margin-top: 12px; box-shadow: 4px 4px 0 #2B1B12;
+  }
+  .btn:hover { background: #C14A36; transform: translate(-2px, -2px); box-shadow: 6px 6px 0 #2B1B12; }
+  .btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #2B1B12; }
+  #intro .intro-visual { width: 240px; height: 170px; margin: 6px auto 22px; position: relative; }
+  #intro .intro-step { font-size: 12px; letter-spacing: 4px; color: #A63A2A; opacity: 0.85; margin-bottom: 6px; }
+  #tutorial-panel {
+    position: absolute; right: 18px; top: 50%; transform: translateY(-50%);
+    width: 300px; background: rgba(0, 0, 0, 0.85); border: 3px solid #D9A441;
+    color: #F2E4C9; padding: 16px 18px 44px; z-index: 18; font-family: 'PT Sans', sans-serif;
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.6);
+  }
+  #tutorial-panel.hidden { display: none; }
+  #tutorial-panel .tut-hint { font-size: 11px; letter-spacing: 3px; color: #D9A441; margin-bottom: 8px; }
+  #tutorial-panel .tut-text { font-size: 15px; line-height: 1.5; }
+  #tutorial-panel .tut-close {
+    position: absolute; top: 8px; right: 8px; width: 24px; height: 24px;
+    line-height: 20px; text-align: center; background: #A63A2A;
+    border: 2px solid #2B1B12; color: #F2E4C9; cursor: pointer; font-weight: bold; font-size: 14px;
+  }
+  #tutorial-panel .tut-close:hover { background: #C14A36; }
+  #tutorial-panel .tut-counter { position: absolute; bottom: 10px; right: 14px;
+    font-size: 11px; color: #D9A441; letter-spacing: 2px; }
+  #dialogue {
+    position: absolute; left: 40px; right: 40px; bottom: 22px;
+    background: rgba(0, 0, 0, 0.78); border: 3px solid #D9A441;
+    padding: 14px 26px 16px; color: #F2E4C9; z-index: 20;
+    display: flex; flex-direction: column; gap: 6px; font-family: 'PT Serif', serif;
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.5);
+  }
+  #dialogue.hidden { display: none; }
+  #dialogue .speaker { color: #D9A441; font-weight: bold; font-size: 17px;
+    letter-spacing: 1.5px; display: flex; align-items: center; gap: 10px; }
+  #dialogue .speaker .dot { width: 10px; height: 10px; border-radius: 50%; background: #D9A441;
+    box-shadow: 0 0 8px rgba(217,164,65,0.8); }
+  #dialogue .text { font-size: 18px; line-height: 1.45; min-height: 42px; }
+  #dialogue .choices { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  #dialogue .choice {
+    font-family: 'PT Sans', sans-serif; text-align: left;
+    background: rgba(166, 58, 42, 0.28); color: #F2E4C9; border: 2px solid #A63A2A;
+    padding: 9px 14px; cursor: pointer; font-size: 14.5px; transition: all 0.12s; line-height: 1.35;
+  }
+  #dialogue .choice:hover { background: #A63A2A; transform: translateX(4px); }
+  #dialogue .continue { color: #D9A441; font-size: 12px; align-self: flex-end;
+    cursor: pointer; opacity: 0.75; letter-spacing: 2px; }
+  #battle-ui { position: absolute; top: 20px; right: 20px;
+    background: rgba(0,0,0,0.82); border: 3px solid #A63A2A;
+    padding: 10px 18px; color: #F2E4C9; z-index: 15;
+    font-family: 'PT Sans', sans-serif; text-align: right; }
+  #battle-ui.hidden { display: none; }
+  #thief-hp { color: #A63A2A; font-size: 20px; letter-spacing: 3px; }
+  #loc-name {
+    position: absolute; left: 50%; top: 18%; transform: translateX(-50%);
+    font-family: 'Marck Script', 'PT Serif', cursive;
+    font-size: 54px; color: #D9A441;
+    text-shadow: 3px 3px 0 #2B1B12, 0 0 24px rgba(217,164,65,0.4);
+    letter-spacing: 4px; opacity: 0; pointer-events: none;
+    z-index: 12; transition: opacity 0.5s;
+  }
+  #loc-name.show { opacity: 1; }
+  #ending h1 { font-size: 40px; letter-spacing: 4px; margin-top: 8px; }
+  #ending h2 { color: #D9A441; font-size: 24px; margin-bottom: 6px; }
+  #ending .ending-text {
+    font-family: 'PT Serif', serif; font-size: 19px; color: #D9A441;
+    margin: 0 auto 18px; max-width: 680px; font-style: italic;
+  }
+  #ending .utp {
+    font-family: 'PT Serif', serif; font-size: 16px; color: #2B1B12;
+    background: #D9A441; padding: 8px 20px; margin: 4px 0;
+    max-width: 640px; font-weight: bold; text-align: left;
+    border-left: 6px solid #A63A2A;
+  }
+  #ending .thanks { font-style: italic; color: #D9A441; margin: 6px 0 14px; font-size: 15px; }
+</style>
+</head>
+<body>
+<div id="game-container">
+  <canvas id="game" width="1024" height="640"></canvas>
+
+  <div id="menu" class="overlay">
+    <h1>РУСЬ</h1>
+    <h2 style="margin-top:-6px;">ЯВЬ И НАВЬ</h2>
+    <p style="font-style:italic; color:#D9A441; margin-top:20px; font-size:16px; letter-spacing:2px;">Демо-версия · Vertical Slice</p>
+    <button class="btn" id="btn-play">ИГРАТЬ</button>
+  </div>
+
+  <div id="intro" class="overlay hidden">
+    <div class="intro-step" id="intro-step-lbl">ПРЕДЫСТОРИЯ · 1 / 3</div>
+    <div class="intro-visual" id="intro-visual"></div>
+    <p id="intro-text"></p>
+    <button class="btn" id="btn-intro-next">ДАЛЕЕ</button>
+  </div>
+
+  <div id="tutorial-panel" class="hidden">
+    <button class="tut-close" id="tut-close">×</button>
+    <div class="tut-hint">ПОДСКАЗКА</div>
+    <div class="tut-text" id="tut-text"></div>
+    <div class="tut-counter" id="tut-counter"></div>
+  </div>
+
+  <div id="dialogue" class="hidden">
+    <div class="speaker"><span class="dot"></span><span id="dlg-speaker"></span></div>
+    <div class="text" id="dlg-text"></div>
+    <div class="choices" id="dlg-choices"></div>
+    <div class="continue" id="dlg-continue">▼ E — далее</div>
+  </div>
+
+  <div id="battle-ui" class="hidden">
+    <div>ВОР: <span id="thief-hp">♥♥♥</span></div>
+    <div style="font-size:10px; margin-top:4px; color:#D9A441; letter-spacing:1px;">КЛИКАЙ ЛКМ ПО ВОРУ</div>
+  </div>
+
+  <div id="loc-name"></div>
+
+  <div id="ending" class="overlay hidden">
+    <h2 id="ending-title"></h2>
+    <div class="ending-text" id="ending-text"></div>
+    <h1>РУСЬ: ЯВЬ И НАВЬ</h1>
+    <div class="thanks">Спасибо, что сыграли в демо</div>
+    <div class="utp">Уникальный славянский сеттинг: противостояние веры, простого народа и нечисти.</div>
+    <div class="utp">Система выборов, где каждый твой ответ важен: ложь и правда вершат судьбу деревни.</div>
+    <div class="utp">Мораль без морализаторства: каждый платит свою цену за свою правду.</div>
+    <button class="btn" onclick="location.reload()">ИГРАТЬ СНОВА</button>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   РУСЬ: ЯВЬ И НАВЬ — Vertical Slice (единый файл)
+   ===================================================================== */
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+/* ---------- Константы мира ---------- */
+const VILLAGE_W = 2400, VILLAGE_H = 1400;
+const FOREST_W  = 1800, FOREST_H  = 1300;
+
+const ELDER_HOUSE = { x: 400, y: 400, w: 320, h: 240 };
+const SHRINE      = { x: 1680, y: 700, w: 120, h: 100 };
+const ELDER_POS   = { x: 780, y: 640 };
+const VEDA_POS    = { x: 1740, y: 880 };
+const MOUND       = { x: 650, y: 380, w: 420, h: 240 };
+const THIEF_START = { x: 880, y: 480 };
+const HIDE_SPOT   = { x: 260, y: 620 };
+
+const COL = {
+  bg:'#F2E4C9', night:'#2E2A3A', road:'#B8894F', grass:'#5E7A3A',
+  wood:'#8B5A2B', ink:'#2B1B12', accent:'#A63A2A', marker:'#D9A441',
+  fog:'rgba(201,194,214,0.30)', spirit:'#6B4F8A'
+};
+
+/* ---------- Состояние ---------- */
+const G = {
+  scene: 'menu',
+  location: 'village',
+  keys: {},
+  player: { x: 600, y: 950, speed: 4, facing: 'down', hitFlash: 0 },
+  camera: { x: 0, y: 0 },
+  questState: 'none',
+  vedaPersuaded: false,
+  liedToElder: false,
+  thiefState: 'none',
+  thiefHP: 3,
+  thiefPos: { x: THIEF_START.x, y: THIEF_START.y },
+  thiefHitFlash: 0,
+  thiefStealTimer: 0,
+  introStep: 0,
+  tutorialStep: 0,
+  tutorialActive: false,
+  dialogueActive: false,
+  dialogueNodes: null,
+  dialogueNodeId: null,
+  dialogueOnEnd: null,
+  fade: 0, fadeTarget: 0, shake: 0,
+  lastTime: 0, particles: [], fireflies: [],
+  locationNameTimer: 0
+};
+
+/* =========================================================
+   АУДИО
+   ========================================================= */
+let audioCtx = null, ambientOsc = null, ambientGain = null;
+function initAudio() {
+  if (audioCtx) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    ambientOsc = audioCtx.createOscillator();
+    ambientGain = audioCtx.createGain();
+    ambientOsc.type = 'sine'; ambientOsc.frequency.value = 55;
+    ambientGain.gain.value = 0.03;
+    ambientOsc.connect(ambientGain); ambientGain.connect(audioCtx.destination);
+    ambientOsc.start();
+  } catch(e) {}
+}
+function setAmbientMood(f) {
+  if (ambientOsc && audioCtx) ambientOsc.frequency.setTargetAtTime(f, audioCtx.currentTime, 0.5);
+}
+function playTone(freq, dur, type='sine', vol=0.08) {
+  if (!audioCtx) return;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(vol, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start(); o.stop(audioCtx.currentTime + dur);
+}
+const SFX = {
+  click:   () => playTone(440, 0.06, 'triangle', 0.09),
+  open:    () => { playTone(330, 0.12); playTone(220, 0.18); },
+  choice:  () => { playTone(660, 0.07, 'triangle', 0.07); playTone(880, 0.09, 'triangle', 0.05); },
+  hit:     () => { playTone(140, 0.12, 'sawtooth', 0.13); playTone(90, 0.16, 'sawtooth', 0.09); },
+  marker:  () => playTone(880, 0.08, 'sine', 0.05),
+  transition: () => {
+    if (!audioCtx) return;
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type='sine';
+    o.frequency.setValueAtTime(800, audioCtx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(220, audioCtx.currentTime+0.5);
+    g.gain.setValueAtTime(0.06, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+0.55);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime+0.55);
+  },
+  victory: () => {
+    playTone(523, 0.15, 'triangle', 0.08);
+    setTimeout(() => playTone(659, 0.15, 'triangle', 0.08), 100);
+    setTimeout(() => playTone(784, 0.25, 'triangle', 0.08), 220);
+  }
+};
+
+/* =========================================================
+   ДИАЛОГИ (по ТЗ — дословно)
+   ========================================================= */
+const ELDER_DIALOG_1 = {
+  lub1:{speaker:'Любомир', text:'Эй, Ярослав, поди-ка сюда. Слушай, беда какая: люди пропадают, скот дохнет, духи в избах шалят. Жрица говорит — дань не доходит до мёртвых, хочет к наместнику идти. А я знаю, что будет, если она пойдёт: хазары придут с огнём, и всё, что мы тут построили, сгорит. Я не хочу войны, понимаешь? Мне мир нужен, а не разорение.', next:'hero1'},
+  hero1:{speaker:'Ярослав', text:'А если она права? Если нежить и правда приходит из-за того, что дань духов забирают?', next:'lub2'},
+  lub2:{speaker:'Любомир', text:'Всё равно, мы проиграем. Только быстрее. Понимаешь? Нельзя нам бороться с этим хазаром. А если начнём — не будет ни нас, ни деревни. Я прошу тебя: уговори её не лезть. Пусть молится. Пусть ждёт. А я уж как-нибудь договорюсь с наместником.', next:'hero2'},
+  hero2:{speaker:'Ярослав', text:'А если не договоришься?', next:'lub3'},
+  lub3:{speaker:'Любомир', text:'Тогда, может, обойдётся. Может — нет. Но войны не будет. Это главное. Всё остальное — переживём.', next:'lub4'},
+  lub4:{speaker:'Любомир', text:'Я тебя прошу: уговори жрицу не лезть. А если не выйдет — хотя бы узнай, что она задумала. Я должен знать, чего ждать.', next:'END', onEnter:()=>{G.questState='word';}}
+};
+
+const VEDA_DIALOG = {
+  v1:{speaker:'Веда', text:'Ты пришёл к Моране или к нам? Впрочем, неважно. Старейшина уже сказал тебе, что я хочу идти к наместнику? Он боится войны. Я тоже боюсь. Но я боюсь другого: того, что будет, если мы и дальше будем молчать. Мы носим подношения на курганы каждую седмицу. А их кто-то забирает. И это не Морана, и не нечисть. Это люди. Я знаю, что это люди с хазарского стана. Но мне нужны доказательства. Иначе старейшина скажет, что я выдумываю, а наместник посмеётся мне в лицо.', next:'h1'},
+  h1:{speaker:'Ярослав', text:'Что ты хочешь от меня?', next:'v2'},
+  v2:{speaker:'Веда', text:'Пойди на курганы, что в лесу. Ночью. Спрячься и посмотри, кто приходит за подношениями. Мне не нужна война. Мне нужна правда. Если старейшина увидит, что я права, он, может, и сам решится что-то сделать. А если нет — я пойду сама. Но мне нужен свидетель. Кто-то, кому поверят. Ты можешь им стать.', next:'h2'},
+  h2:{speaker:'Ярослав', text:'А если это приведёт к войне?', next:'v3'},
+  v3:{speaker:'Веда', text:'Тогда война будет. Но мы будем знать, за что умираем. А это уже немало.', choices:[
+    {text:'Хорошо, проверю я твои курганы.', next:'v_accept'},
+    {text:'Думаешь, поход на курганы что-то даст? Дай старейшине время, он договорится.', next:'v_naive'}
+  ]},
+  v_accept:{speaker:'Веда', text:'Иди. И смотри внимательно. Морана не прощает слепых.', next:'END', onEnter:()=>{G.questState='shadows';}},
+  v_naive:{speaker:'Веда', text:'С хазарами? Ты наивен.', choices:[
+    {text:'Он боится войны, но он не глуп. Если ты дашь ему время, он найдёт способ. А если пойдёшь сама — всё сгорит. Ты этого хочешь?', next:'v_persuaded'},
+    {text:'Подумай о людях. Если ты начнёшь войну, они пострадают. Ты этого хочешь?', next:'v_failed'}
+  ]},
+  v_persuaded:{speaker:'Веда', text:'Не хочу, но и молчать не могу. Ладно. Я подожду. Но недолго. Если через седмицу ничего не изменится — я пойду сама.', next:'END', onEnter:()=>{G.vedaPersuaded=true; G.questState='return';}},
+  v_failed:{speaker:'Веда', text:'Я думаю о людях. Я молюсь за них каждую ночь. И вижу, как они гибнут от нечисти, пока старейшина прячется. А теперь — прочь, сама обо всём позабочусь.', next:'END', onEnter:()=>{G.vedaPersuaded=false; G.questState='return';}}
+};
+
+const ELDER_REPORT_SUCCESS = {
+  e1:{speaker:'Любомир', text:'Вернулся? Что сказала Веда?', next:'h'},
+  h:{speaker:'Ярослав', text:'Она согласилась подождать. Я убедил её.', next:'e2'},
+  e2:{speaker:'Любомир', text:'Слава богам... Хотя, знаешь, на душе всё равно неспокойно. Сходи-ка ты на курганы, Ярослав. Вдруг и правда шальной дух. Избавишься от него — решишь и нашу проблему. Ступай.', next:'END', onEnter:()=>{G.questState='shadows';}}
+};
+
+const ELDER_REPORT_FAIL = {
+  e1:{speaker:'Любомир', text:'Вернулся? Что она сказала? Согласилась ждать?', choices:[
+    {text:'Она согласилась подождать. Я её убедил. (солгать)', next:'lie'},
+    {text:'Я не смог её убедить, теперь она хочет идти к наместнику. (правда)', next:'truth'}
+  ]},
+  lie:{speaker:'Любомир', text:'Слава богам... Ступай, отдохни пока. Я сам схожу к ней, поговорю ещё.', next:'END', onEnter:()=>{G.liedToElder=true; G.questState='shadows';}},
+  truth:{speaker:'Любомир', text:'Вот ведь беда на мою седую голову... Ладно, иди, посмотри что там на этом сургане происходит. Авось, и правда шальной дух, избавишься от него — решишь и нашу проблему. Ступай, а я пока сам к Веде схожу, поговорю ещё.', next:'END', onEnter:()=>{G.questState='shadows';}}
+};
+
+const THIEF_DEFEAT_NODES = {
+  start:{speaker:'Вор', text:'Не убивай! Я лишь выполнял приказ наместника. Он забирает дань, чтобы продать её.', next:'hero'},
+  hero:{speaker:'Ярослав', text:'Наместник... Значит, Веда была права. Я найду доказательства.', next:'END'}
+};
+
+const THIEF_ESCAPE_NODES = {
+  start:{speaker:'Ярослав', text:'Вор забрал подношения и скрылся в ночи. Но на земле блеснула хазарская монета — доказательство.', next:'hero'},
+  hero:{speaker:'Ярослав', text:'Теперь у меня есть то, что нужно Веде и Любомиру.', next:'END'}
+};
+
+/* --- Явные алиасы 'start' для всех диалогов --- */
+ELDER_DIALOG_1.start       = ELDER_DIALOG_1.lub1;
+VEDA_DIALOG.start          = VEDA_DIALOG.v1;
+ELDER_REPORT_SUCCESS.start = ELDER_REPORT_SUCCESS.e1;
+ELDER_REPORT_FAIL.start    = ELDER_REPORT_FAIL.e1;
+
+/* =========================================================
+   ДИАЛОГ-СИСТЕМА
+   ========================================================= */
+function showDialogue(nodes, startId='start', onEnd=null) {
+  G.dialogueActive = true;
+  G.dialogueNodes = nodes;
+  G.dialogueNodeId = startId;
+  G.dialogueOnEnd = onEnd;
+  SFX.open();
+  renderDialogueNode();
+}
+function renderDialogueNode() {
+  const node = G.dialogueNodes[G.dialogueNodeId];
+  if (!node) { endDialogue(); return; }
+  if (node.onEnter) node.onEnter();
+  document.getElementById('dlg-speaker').textContent = node.speaker || '';
+  document.getElementById('dlg-text').textContent = node.text || '';
+  const choicesEl = document.getElementById('dlg-choices');
+  choicesEl.innerHTML = '';
+  const contEl = document.getElementById('dlg-continue');
+  if (node.choices && node.choices.length) {
+    contEl.style.display = 'none';
+    node.choices.forEach(c => {
+      const btn = document.createElement('button');
+      btn.className = 'choice';
+      btn.textContent = c.text;
+      btn.onclick = () => {
+        SFX.choice();
+        if (c.next === 'END') endDialogue();
+        else { G.dialogueNodeId = c.next; renderDialogueNode(); }
+      };
+      choicesEl.appendChild(btn);
+    });
+  } else {
+    contEl.style.display = 'block';
+  }
+  document.getElementById('dialogue').classList.remove('hidden');
+}
+function advanceDialogue() {
+  if (!G.dialogueActive) return;
+  const node = G.dialogueNodes[G.dialogueNodeId];
+  if (!node) { endDialogue(); return; }
+  if (node.choices && node.choices.length) return;
+  SFX.click();
+  if (!node.next || node.next === 'END') endDialogue();
+  else { G.dialogueNodeId = node.next; renderDialogueNode(); }
+}
+function endDialogue() {
+  G.dialogueActive = false;
+  const cb = G.dialogueOnEnd;
+  G.dialogueOnEnd = null;
+  G.dialogueNodes = null;
+  document.getElementById('dialogue').classList.add('hidden');
+  if (cb) cb();
+}
+
+/* =========================================================
+   ВВОД
+   ========================================================= */
+window.addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  G.keys[k] = true;
+
+  if (k === 'e') {
+    e.preventDefault();
+    // Сначала E закрывает туториал
+    if (G.tutorialActive) {
+      document.getElementById('tut-close').click();
+      return;
+    }
+    if (G.dialogueActive) advanceDialogue();
+    else handleInteract();
+  }
+});
+window.addEventListener('keyup', e => { G.keys[e.key.toLowerCase()] = false; });
+
+canvas.addEventListener('click', e => {
+  if (G.thiefState !== 'fighting' || G.location !== 'forest') return;
+  const rect = canvas.getBoundingClientRect();
+  const sx = (e.clientX - rect.left) * (W / rect.width);
+  const sy = (e.clientY - rect.top)  * (H / rect.height);
+  const wx = sx + G.camera.x, wy = sy + G.camera.y;
+  if (Math.abs(wx - G.thiefPos.x) < 55 && Math.abs(wy - G.thiefPos.y) < 65) hitThief();
+});
+
+/* =========================================================
+   ВЗАИМОДЕЙСТВИЕ
+   ========================================================= */
+function handleInteract() {
+  if (G.scene !== 'playing') return;
+
+  // Авто-закрытие туториала при взаимодействии
+  if (G.tutorialActive) {
+    G.tutorialActive = false;
+    document.getElementById('tutorial-panel').classList.add('hidden');
+  }
+
+  if (G.location === 'village') {
+    const dElder = Math.hypot(G.player.x - ELDER_POS.x, G.player.y - ELDER_POS.y);
+    if (dElder < 95) {
+      if (G.questState === 'none') showDialogue(ELDER_DIALOG_1);
+      else if (G.questState === 'return')
+        showDialogue(G.vedaPersuaded ? ELDER_REPORT_SUCCESS : ELDER_REPORT_FAIL);
+      else showDialogue({start:{speaker:'Любомир', text:'Ступай, Ярослав. Время не ждёт.', next:'END'}});
+      return;
+    }
+    const dVeda = Math.hypot(G.player.x - VEDA_POS.x, G.player.y - VEDA_POS.y);
+    if (dVeda < 95) {
+      if (G.questState === 'word') showDialogue(VEDA_DIALOG);
+      else if (G.questState === 'return' || G.questState === 'shadows')
+        showDialogue({start:{speaker:'Веда', text:'Иди с миром. Морана не любит праздных речей.', next:'END'}});
+      else showDialogue({start:{speaker:'Веда', text:'Иди своей дорогой.', next:'END'}});
+      return;
+    }
+  } else if (G.location === 'forest') {
+    if (G.thiefState === 'stealing') {
+      const dT = Math.hypot(G.player.x - G.thiefPos.x, G.player.y - G.thiefPos.y);
+      if (dT < 110) startBattle();
+    }
+  }
+}
+
+/* =========================================================
+   БОЙ
+   ========================================================= */
+function startBattle() {
+  G.thiefState = 'fighting';
+  document.getElementById('battle-ui').classList.remove('hidden');
+  updateBattleUI();
+  SFX.marker();
+}
+function updateBattleUI() {
+  let s = '';
+  for (let i = 0; i < 3; i++) s += i < G.thiefHP ? '♥' : '♡';
+  document.getElementById('thief-hp').textContent = s;
+}
+function hitThief() {
+  if (G.thiefHP <= 0) return;
+  G.thiefHP--; G.thiefHitFlash = 0.35; G.shake = 0.28;
+  SFX.hit();
+  for (let i = 0; i < 12; i++) {
+    G.particles.push({
+      x: G.thiefPos.x, y: G.thiefPos.y,
+      vx: (Math.random()-0.5)*320, vy: (Math.random()-0.5)*320-60,
+      life: 0.5, maxLife: 0.5,
+      color: i % 2 ? COL.accent : COL.marker
+    });
+  }
+  updateBattleUI();
+  if (G.thiefHP <= 0) {
+    G.thiefState = 'defeated';
+    document.getElementById('battle-ui').classList.add('hidden');
+    SFX.victory();
+    setTimeout(() => {
+      showDialogue(THIEF_DEFEAT_NODES, 'start', () => triggerEnding('fight'));
+    }, 700);
+  }
+}
+function triggerWatchedBranch() {
+  G.thiefState = 'gone';
+  setTimeout(() => {
+    showDialogue(THIEF_ESCAPE_NODES, 'start', () => triggerEnding('watch'));
+  }, 900);
+}
+
+/* =========================================================
+   ФИНАЛ
+   ========================================================= */
+function triggerEnding(outcome) {
+  G.scene = 'ending';
+  let num;
+  if (G.liedToElder) num = 3;
+  else if (outcome === 'fight') num = G.vedaPersuaded ? 1 : 3;
+  else num = 2;
+
+  const E = {
+    1:{title:'Концовка 1: МИР', text:'Ты сохранил деревню от войны, но духи всё ещё голодны.'},
+    2:{title:'Концовка 2: ПРАВДА', text:'Ты узнал правду. Теперь Веда и Любомир знают о предательстве наместника.'},
+    3:{title:'Концовка 3: КРОВЬ', text:'Бунт начался. Веда довольна, но Любомир в ужасе от того, что будет дальше.'}
+  };
+  const e = E[num];
+  document.getElementById('ending-title').textContent = e.title;
+  document.getElementById('ending-text').textContent = e.text;
+  setTimeout(() => {
+    document.getElementById('ending').classList.remove('hidden');
+    SFX.victory();
+  }, 500);
+}
+
+/* =========================================================
+   ПЕРЕХОДЫ
+   ========================================================= */
+function showLocationName(name) {
+  const el = document.getElementById('loc-name');
+  el.textContent = name;
+  el.classList.add('show');
+  G.locationNameTimer = 2.2;
+}
+function enterForest() {
+  if (G.fadeTarget > 0) return;
+  G.fadeTarget = 1; SFX.transition(); setAmbientMood(48);
+  setTimeout(() => {
+    G.location = 'forest';
+    G.player.x = 150; G.player.y = 700;
+    G.thiefStealTimer = 0;
+    if (G.questState === 'shadows') {
+      G.thiefPos = {x: THIEF_START.x, y: THIEF_START.y};
+      G.thiefState = 'stealing'; G.thiefHP = 3;
+    } else G.thiefState = 'none';
+    G.camera.x = Math.max(0, Math.min(FOREST_W - W, G.player.x - W/2));
+    G.camera.y = Math.max(0, Math.min(FOREST_H - H, G.player.y - H/2));
+    G.fadeTarget = 0;
+    showLocationName('КУРГАНЫ');
+  }, 280);
+}
+function enterVillage() {
+  if (G.fadeTarget > 0) return;
+  G.fadeTarget = 1; SFX.transition(); setAmbientMood(55);
+  setTimeout(() => {
+    G.location = 'village';
+    G.player.x = VILLAGE_W - 150; G.player.y = 700;
+    G.camera.x = Math.max(0, Math.min(VILLAGE_W - W, G.player.x - W/2));
+    G.camera.y = Math.max(0, Math.min(VILLAGE_H - H, G.player.y - H/2));
+    G.fadeTarget = 0;
+    showLocationName('ДЕРЕВНЯ');
+  }, 280);
+}
+
+/* =========================================================
+   КОЛЛИЗИИ
+   ========================================================= */
+function isBlocked(x, y) {
+  const px = x - 14, py = y - 10, pw = 28, ph = 20;
+  if (G.location === 'village') {
+    const solids = [ELDER_HOUSE, {x: SHRINE.x, y: SHRINE.y + 20, w: SHRINE.w, h: SHRINE.h}];
+    for (const s of solids) {
+      if (px < s.x + s.w && px + pw > s.x && py < s.y + s.h && py + ph > s.y) return true;
+    }
+  }
+  return false;
+}
+
+/* =========================================================
+   ОБНОВЛЕНИЕ
+   ========================================================= */
+function update(dt) {
+  G.fade += (G.fadeTarget - G.fade) * dt * 8;
+  if (G.thiefHitFlash > 0) G.thiefHitFlash -= dt;
+  if (G.shake > 0) G.shake -= dt;
+  if (G.player.hitFlash > 0) G.player.hitFlash -= dt;
+
+  for (let i = G.particles.length - 1; i >= 0; i--) {
+    const p = G.particles[i];
+    p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 380 * dt; p.life -= dt;
+    if (p.life <= 0) G.particles.splice(i, 1);
+  }
+  if (G.locationNameTimer > 0) {
+    G.locationNameTimer -= dt;
+    if (G.locationNameTimer <= 0) document.getElementById('loc-name').classList.remove('show');
+  }
+  if (G.location === 'forest') {
+    while (G.fireflies.length < 14) {
+      G.fireflies.push({bx: Math.random()*FOREST_W, by: Math.random()*FOREST_H,
+        phase: Math.random()*Math.PI*2, speed: 0.6 + Math.random()*0.8,
+        radius: 30 + Math.random()*60});
+    }
+    G.fireflies.forEach(f => { f.phase += dt * f.speed; });
+  } else G.fireflies.length = 0;
+
+  if (G.scene !== 'playing' || G.dialogueActive || G.tutorialActive) return;
+
+  let dx = 0, dy = 0;
+  if (G.keys['w'] || G.keys['arrowup'])    { dy -= 1; G.player.facing = 'up'; }
+  if (G.keys['s'] || G.keys['arrowdown'])  { dy += 1; G.player.facing = 'down'; }
+  if (G.keys['a'] || G.keys['arrowleft'])  { dx -= 1; G.player.facing = 'left'; }
+  if (G.keys['d'] || G.keys['arrowright']) { dx += 1; G.player.facing = 'right'; }
+
+  if (dx || dy) {
+    const len = Math.hypot(dx, dy); dx /= len; dy /= len;
+    const sp = G.player.speed * 60;
+    const nx = G.player.x + dx * sp * dt;
+    const ny = G.player.y + dy * sp * dt;
+    if (!isBlocked(nx, G.player.y)) G.player.x = nx;
+    if (!isBlocked(G.player.x, ny)) G.player.y = ny;
+    const w = G.location === 'village' ? VILLAGE_W : FOREST_W;
+    const h = G.location === 'village' ? VILLAGE_H : FOREST_H;
+    G.player.x = Math.max(20, Math.min(w - 20, G.player.x));
+    G.player.y = Math.max(20, Math.min(h - 20, G.player.y));
+  }
+
+  if (G.location === 'village' && G.player.x > VILLAGE_W - 40) enterForest();
+  else if (G.location === 'forest' && G.player.x < 40) enterVillage();
+
+  if (G.location === 'forest' && G.thiefState === 'stealing') {
+    const d = Math.hypot(G.player.x - G.thiefPos.x, G.player.y - G.thiefPos.y);
+    if (d > 150) {
+      G.thiefStealTimer += dt;
+      if (G.thiefStealTimer >= 12) triggerWatchedBranch();
+    } else G.thiefStealTimer = Math.max(0, G.thiefStealTimer - dt*2);
+  }
+
+  const world = G.location === 'village'
+    ? {w: VILLAGE_W, h: VILLAGE_H}
+    : {w: FOREST_W, h: FOREST_H};
+  G.camera.x = Math.max(0, Math.min(world.w - W, G.player.x - W/2));
+  G.camera.y = Math.max(0, Math.min(world.h - H, G.player.y - H/2));
+}
+
+/* =========================================================
+   РЕНДЕР
+   ========================================================= */
+function render() {
+  ctx.save();
+  if (G.shake > 0) {
+    const s = G.shake * 30;
+    ctx.translate((Math.random()-0.5)*s, (Math.random()-0.5)*s);
+  }
+  ctx.clearRect(-20, -20, W+40, H+40);
+
+  if (G.scene === 'menu' || G.scene === 'intro' || G.scene === 'ending') {
+    ctx.fillStyle = COL.night;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+    return;
+  }
+
+  if (G.location === 'village') renderVillage();
+  else renderForest();
+
+  G.particles.forEach(p => {
+    const a = p.life / p.maxLife;
+    ctx.globalAlpha = a;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - G.camera.x - 3, p.y - G.camera.y - 3, 6, 6);
+  });
+  ctx.globalAlpha = 1;
+
+  drawHUD();
+
+  if (G.fade > 0.01) {
+    ctx.fillStyle = `rgba(0,0,0,${G.fade})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+  ctx.restore();
+}
+
+/* ---------- Деревня ---------- */
+function renderVillage() {
+  const cx = G.camera.x, cy = G.camera.y;
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = COL.grass;
+  const patches = [
+    {x:200,y:200,r:90},{x:900,y:300,r:110},{x:1500,y:400,r:120},
+    {x:500,y:1100,r:100},{x:1300,y:1150,r:105},{x:2100,y:550,r:110},
+    {x:2250,y:1200,r:80},{x:100,y:800,r:75},{x:1000,y:700,r:70}
+  ];
+  patches.forEach(p => { ctx.beginPath(); ctx.arc(p.x-cx, p.y-cy, p.r, 0, Math.PI*2); ctx.fill(); });
+
+  ctx.fillStyle = COL.road;
+  ctx.beginPath();
+  ctx.moveTo(600-cx, 1400-cy); ctx.lineTo(700-cx, 950-cy); ctx.lineTo(750-cx, 780-cy);
+  ctx.lineTo(950-cx, 800-cy);  ctx.lineTo(1500-cx, 950-cy); ctx.lineTo(2000-cx, 950-cy);
+  ctx.lineTo(2400-cx, 900-cy); ctx.lineTo(2400-cx, 1000-cy); ctx.lineTo(2000-cx, 1050-cy);
+  ctx.lineTo(1500-cx, 1050-cy); ctx.lineTo(950-cx, 900-cy); ctx.lineTo(800-cx, 880-cy);
+  ctx.lineTo(760-cx, 1000-cy);  ctx.lineTo(700-cx, 1400-cy);
+  ctx.closePath(); ctx.fill();
+
+  const trees = [
+    {x:100,y:300},{x:300,y:150},{x:1000,y:180},{x:1300,y:180},
+    {x:1700,y:230},{x:2100,y:300},{x:250,y:1150},{x:1050,y:1280},
+    {x:1950,y:1250},{x:2200,y:900}
+  ];
+  trees.forEach(t => drawTree(t.x-cx, t.y-cy, 60, COL.grass));
+
+  drawHouse(ELDER_HOUSE.x-cx, ELDER_HOUSE.y-cy, ELDER_HOUSE.w, ELDER_HOUSE.h);
+  drawShrine(SHRINE.x-cx, SHRINE.y-cy, SHRINE.w, SHRINE.h);
+
+  drawNPC(ELDER_POS.x-cx, ELDER_POS.y-cy, COL.wood, true);
+  if (G.questState === 'none' || G.questState === 'return')
+    drawMarker(ELDER_POS.x-cx, ELDER_POS.y-cy-48, '!');
+  if (!G.dialogueActive && (G.questState === 'none' || G.questState === 'return')) {
+    if (Math.hypot(G.player.x-ELDER_POS.x, G.player.y-ELDER_POS.y) < 95)
+      drawPrompt(ELDER_POS.x-cx, ELDER_POS.y-cy-68);
+  }
+
+  drawNPC(VEDA_POS.x-cx, VEDA_POS.y-cy, '#5E7A3A', false);
+  if (G.questState === 'word') drawMarker(VEDA_POS.x-cx, VEDA_POS.y-cy-48, '!');
+  if (!G.dialogueActive && G.questState === 'word') {
+    if (Math.hypot(G.player.x-VEDA_POS.x, G.player.y-VEDA_POS.y) < 95)
+      drawPrompt(VEDA_POS.x-cx, VEDA_POS.y-cy-68);
+  }
+
+  if (G.questState === 'shadows') drawEdgeMarkerRight(VILLAGE_W-80-cx, 950-cy);
+  drawPlayer();
+}
+
+/* ---------- Лес ---------- */
+function renderForest() {
+  const cx = G.camera.x, cy = G.camera.y;
+  ctx.fillStyle = COL.night;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = '#3D3A4A';
+  ctx.beginPath();
+  ctx.moveTo(0-cx, 650-cy); ctx.lineTo(400-cx, 550-cy); ctx.lineTo(900-cx, 550-cy);
+  ctx.lineTo(1800-cx, 650-cy); ctx.lineTo(1800-cx, 780-cy); ctx.lineTo(900-cx, 680-cy);
+  ctx.lineTo(400-cx, 680-cy); ctx.lineTo(0-cx, 780-cy);
+  ctx.closePath(); ctx.fill();
+
+  const trees = [
+    {x:120,y:300},{x:320,y:200},{x:520,y:950},{x:1100,y:320},{x:1400,y:420},
+    {x:1650,y:220},{x:220,y:1050},{x:1250,y:1050},{x:1550,y:1150},
+    {x:420,y:850},{x:950,y:950},{x:1720,y:950},{x:620,y:1150},
+    {x:1050,y:120},{x:200,y:550}
+  ];
+  trees.forEach(t => drawForestTree(t.x-cx, t.y-cy));
+
+  drawMound(MOUND.x-cx, MOUND.y-cy, MOUND.w, MOUND.h);
+
+  if (G.questState === 'shadows') drawHideSpot(HIDE_SPOT.x-cx, HIDE_SPOT.y-cy);
+
+  if (G.thiefState === 'stealing' || G.thiefState === 'fighting')
+    drawThief(G.thiefPos.x-cx, G.thiefPos.y-cy);
+
+  G.fireflies.forEach(f => {
+    const x = f.bx + Math.cos(f.phase)*f.radius - cx;
+    const y = f.by + Math.sin(f.phase*1.3)*f.radius*0.6 - cy;
+    if (x < -20 || x > W+20 || y < -20 || y > H+20) return;
+    const a = 0.35 + 0.55 * (0.5 + 0.5 * Math.sin(f.phase*2.7));
+    ctx.fillStyle = `rgba(217,164,65,${a*0.15})`;
+    ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = `rgba(217,164,65,${a})`;
+    ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI*2); ctx.fill();
+  });
+
+  ctx.fillStyle = COL.fog;
+  ctx.fillRect(0, 0, W, H);
+
+  const g = ctx.createRadialGradient(W/2, H/2, 80, W/2, H/2, W*0.65);
+  g.addColorStop(0, 'rgba(46,42,58,0)');
+  g.addColorStop(1, 'rgba(10,8,20,0.65)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  drawEdgeMarkerLeft(70-cx, 720-cy);
+  drawPlayer();
+  if (G.thiefState === 'stealing' && G.thiefStealTimer > 0.5) drawWatchIndicator();
+}
+
+/* ---------- Примитивы ---------- */
+function drawTree(x, y, size, color) {
+  ctx.fillStyle = COL.wood;
+  ctx.fillRect(x - size*0.08, y + size*0.05, size*0.16, size*0.35);
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = 3;
+  ctx.strokeRect(x - size*0.08, y + size*0.05, size*0.16, size*0.35);
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(x, y - size*0.1, size*0.4, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+}
+function drawForestTree(x, y) {
+  ctx.fillStyle = '#120E1E';
+  ctx.fillRect(x-6, y, 12, 55);
+  ctx.fillStyle = '#3D3A4A';
+  ctx.beginPath(); ctx.arc(x, y-22, 42, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#0A0812'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#4D4A5A';
+  ctx.beginPath(); ctx.arc(x-12, y-32, 16, 0, Math.PI*2); ctx.fill();
+}
+function drawHouse(x, y, w, h) {
+  ctx.fillStyle = COL.wood; ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = 4; ctx.strokeRect(x, y, w, h);
+  ctx.lineWidth = 2;
+  for (let i = 1; i < 6; i++) {
+    ctx.beginPath(); ctx.moveTo(x, y + h*i/6); ctx.lineTo(x + w, y + h*i/6); ctx.stroke();
+  }
+  ctx.fillStyle = '#6B4519';
+  ctx.fillRect(x-12, y-34, w+24, 42);
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = 3; ctx.strokeRect(x-12, y-34, w+24, 42);
+  ctx.beginPath(); ctx.moveTo(x-12, y-12); ctx.lineTo(x+w+12, y-12); ctx.stroke();
+  ctx.fillStyle = '#4A2B12'; ctx.fillRect(x + w*0.42, y + h - 52, w*0.16, 52);
+  ctx.strokeStyle = COL.ink; ctx.strokeRect(x + w*0.42, y + h - 52, w*0.16, 52);
+  ctx.fillStyle = COL.marker;
+  ctx.fillRect(x + w*0.14, y + h*0.3, 32, 32); ctx.strokeRect(x + w*0.14, y + h*0.3, 32, 32);
+  ctx.fillRect(x + w*0.72, y + h*0.3, 32, 32); ctx.strokeRect(x + w*0.72, y + h*0.3, 32, 32);
+}
+function drawShrine(x, y, w, h) {
+  ctx.fillStyle = '#6B4519';
+  ctx.fillRect(x-10, y, 14, h+10);
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = 3; ctx.strokeRect(x-10, y, 14, h+10);
+  ctx.fillRect(x+w-4, y, 14, h+10); ctx.strokeRect(x+w-4, y, 14, h+10);
+  ctx.fillStyle = '#4A2B12'; ctx.fillRect(x, y+15, w, h-15); ctx.strokeRect(x, y+15, w, h-15);
+  ctx.fillStyle = '#3A1B08';
+  ctx.beginPath(); ctx.moveTo(x-20, y+5); ctx.lineTo(x+w/2, y-30); ctx.lineTo(x+w+20, y+5);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = COL.marker; ctx.font = 'bold 26px PT Serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('☾', x+w/2, y+55);
+}
+function drawNPC(x, y, color, hasStaff) {
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.beginPath(); ctx.ellipse(x, y+22, 20, 6, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = color; ctx.fillRect(x-16, y-10, 32, 32);
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = 3; ctx.strokeRect(x-16, y-10, 32, 32);
+  ctx.fillStyle = '#F2C9A0';
+  ctx.beginPath(); ctx.arc(x, y-22, 13, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(x, y-30, 11, Math.PI, 0); ctx.fill(); ctx.stroke();
+  if (hasStaff) {
+    ctx.strokeStyle = COL.wood; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x+20, y+20); ctx.lineTo(x+20, y-30); ctx.stroke();
+    ctx.fillStyle = COL.marker;
+    ctx.beginPath(); ctx.arc(x+20, y-32, 5, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  }
+}
+function drawPlayer() {
+  const x = G.player.x - G.camera.x, y = G.player.y - G.camera.y;
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath(); ctx.ellipse(x, y+20, 18, 6, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = G.player.hitFlash > 0 ? '#FF8F7F' : COL.accent;
+  ctx.fillRect(x-14, y-12, 28, 32);
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = 3; ctx.strokeRect(x-14, y-12, 28, 32);
+  ctx.fillStyle = COL.ink; ctx.fillRect(x-14, y+4, 28, 4);
+  ctx.fillStyle = '#F2C9A0';
+  ctx.beginPath(); ctx.arc(x, y-22, 14, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = COL.wood;
+  ctx.beginPath(); ctx.arc(x, y-30, 12, Math.PI, 0); ctx.fill(); ctx.stroke();
+  if (G.player.facing !== 'up') {
+    ctx.fillStyle = COL.ink;
+    ctx.beginPath();
+    ctx.arc(x-5, y-22, 2, 0, Math.PI*2); ctx.arc(x+5, y-22, 2, 0, Math.PI*2); ctx.fill();
+  }
+}
+function drawThief(x, y) {
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.beginPath(); ctx.ellipse(x, y+20, 18, 6, 0, 0, Math.PI*2); ctx.fill();
+  const flash = G.thiefHitFlash > 0;
+  ctx.fillStyle = flash ? '#FF6B5B' : COL.accent;
+  ctx.fillRect(x-16, y-12, 32, 32);
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = 3; ctx.strokeRect(x-16, y-12, 32, 32);
+  ctx.fillStyle = '#1A1824';
+  ctx.beginPath(); ctx.arc(x, y-22, 15, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = COL.marker;
+  ctx.beginPath();
+  ctx.arc(x-5, y-24, 2.2, 0, Math.PI*2); ctx.arc(x+5, y-24, 2.2, 0, Math.PI*2); ctx.fill();
+  if (G.thiefState === 'stealing' && !G.dialogueActive) {
+    if (Math.hypot(G.player.x-G.thiefPos.x, G.player.y-G.thiefPos.y) < 110)
+      drawPrompt(x, y-68);
+  }
+}
+function drawMound(x, y, w, h) {
+  ctx.fillStyle = '#4A4A5A';
+  ctx.beginPath(); ctx.ellipse(x+w/2, y+h*0.55, w/2, h/2, 0, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#1A1A22'; ctx.lineWidth = 4; ctx.stroke();
+  ctx.fillStyle = '#2E2A3A';
+  ctx.fillRect(x+w/2-32, y+h*0.55-22, 64, 44);
+  ctx.strokeStyle = '#0A0812'; ctx.lineWidth = 3;
+  ctx.strokeRect(x+w/2-32, y+h*0.55-22, 64, 44);
+  ctx.fillStyle = COL.marker;
+  for (let i = 0; i < 5; i++) {
+    ctx.beginPath(); ctx.arc(x+w/2-22+i*12, y+h*0.55+34, 4, 0, Math.PI*2); ctx.fill();
+  }
+}
+function drawHideSpot(x, y) {
+  ctx.strokeStyle = COL.marker; ctx.lineWidth = 2;
+  ctx.setLineDash([6, 6]);
+  ctx.beginPath(); ctx.arc(x, y, 40, 0, Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(217,164,65,0.15)';
+  ctx.beginPath(); ctx.arc(x, y, 40, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = COL.marker; ctx.font = 'bold 13px PT Sans';
+  ctx.textAlign = 'center'; ctx.fillText('укрытие', x, y+60);
+}
+function drawMarker(x, y, text) {
+  const bob = Math.sin(Date.now()/280) * 4;
+  ctx.fillStyle = COL.marker;
+  ctx.beginPath(); ctx.arc(x, y+bob, 15, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = 3; ctx.stroke();
+  ctx.fillStyle = COL.ink; ctx.font = 'bold 18px PT Sans';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y+bob+1);
+}
+function drawPrompt(x, y) {
+  ctx.fillStyle = 'rgba(0,0,0,0.88)';
+  ctx.fillRect(x-16, y-12, 32, 26);
+  ctx.strokeStyle = COL.marker; ctx.lineWidth = 2; ctx.strokeRect(x-16, y-12, 32, 26);
+  ctx.fillStyle = COL.marker; ctx.font = 'bold 17px PT Sans';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('E', x, y+1);
+}
+function drawEdgeMarkerRight(x, y) {
+  const bob = Math.sin(Date.now()/300) * 4;
+  ctx.fillStyle = COL.marker;
+  ctx.beginPath();
+  ctx.moveTo(x-18, y-20+bob); ctx.lineTo(x+8, y+bob); ctx.lineTo(x-18, y+20+bob);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = 3; ctx.stroke();
+}
+function drawEdgeMarkerLeft(x, y) {
+  ctx.fillStyle = COL.marker;
+  ctx.beginPath();
+  ctx.moveTo(x+18, y-20); ctx.lineTo(x-8, y); ctx.lineTo(x+18, y+20);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = 3; ctx.stroke();
+}
+
+/* ---------- HUD ---------- */
+function drawHUD() {
+  drawCompass(); drawQuestJournal(); drawInventory(); drawObjective();
+}
+function drawCompass() {
+  const cx = 62, cy = 62, r = 36;
+  ctx.fillStyle = 'rgba(0,0,0,0.65)';
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = COL.marker; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = COL.marker; ctx.font = 'bold 15px PT Sans';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('С', cx, cy-r+12);
+  ctx.fillText('Ю', cx, cy+r-12);
+  ctx.fillText('В', cx+r-12, cy);
+  ctx.fillText('З', cx-r+12, cy);
+  ctx.fillStyle = COL.accent;
+  ctx.beginPath(); ctx.moveTo(cx, cy-20); ctx.lineTo(cx+6, cy); ctx.lineTo(cx-6, cy);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = COL.marker;
+  ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI*2); ctx.fill();
+}
+function drawQuestJournal() {
+  const x = 130, y = 30, w = 44, h = 44;
+  ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = COL.marker; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h);
+  ctx.strokeStyle = COL.marker;
+  ctx.strokeRect(x+12, y+10, 20, 24);
+  ctx.beginPath();
+  ctx.moveTo(x+16, y+16); ctx.lineTo(x+28, y+16);
+  ctx.moveTo(x+16, y+21); ctx.lineTo(x+28, y+21);
+  ctx.moveTo(x+16, y+26); ctx.lineTo(x+24, y+26);
+  ctx.stroke();
+}
+function drawInventory() {
+  const x = W-74, y = 30, w = 44, h = 44;
+  ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = COL.marker; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h);
+  ctx.fillStyle = COL.wood; ctx.strokeStyle = COL.ink;
+  ctx.beginPath(); ctx.arc(x+22, y+26, 11, 0, Math.PI); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = COL.marker; ctx.fillRect(x+19, y+14, 6, 5);
+}
+function drawObjective() {
+  if (!G.questState || G.questState === 'none' || G.questState === 'done') return;
+  let text = '';
+  if (G.questState === 'word') text = 'Поговорить с Ведой';
+  else if (G.questState === 'return') text = 'Вернуться к Любомиру';
+  else if (G.questState === 'shadows') {
+    if (G.location === 'village') text = 'Идти на курганы →';
+    else if (G.thiefState === 'stealing') text = G.thiefStealTimer > 1 ? 'Следи за вором...' : 'Найди вора на курганах';
+    else if (G.thiefState === 'fighting') text = 'Победи вора!';
+  }
+  if (!text) return;
+  ctx.font = 'bold 15px PT Sans';
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  const w = ctx.measureText(text).width + 36;
+  const x = W - w - 84;
+  ctx.fillStyle = 'rgba(0,0,0,0.72)'; ctx.fillRect(x, 30, w, 36);
+  ctx.strokeStyle = COL.marker; ctx.lineWidth = 2; ctx.strokeRect(x, 30, w, 36);
+  ctx.fillStyle = COL.marker; ctx.fillText(text, W-102, 48);
+}
+function drawWatchIndicator() {
+  const prog = Math.min(1, G.thiefStealTimer / 12);
+  const barW = 200, barH = 10;
+  const bx = W/2 - barW/2, by = 44;
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(bx-8, by-22, barW+16, 44);
+  ctx.strokeStyle = COL.marker; ctx.lineWidth = 2;
+  ctx.strokeRect(bx-8, by-22, barW+16, 44);
+  ctx.fillStyle = COL.marker; ctx.font = 'bold 12px PT Sans';
+  ctx.textAlign = 'center'; ctx.fillText('НАБЛЮДЕНИЕ', W/2, by-8);
+  ctx.fillStyle = 'rgba(166,58,42,0.4)'; ctx.fillRect(bx, by, barW, barH);
+  ctx.fillStyle = COL.accent; ctx.fillRect(bx, by, barW * prog, barH);
+  ctx.strokeStyle = COL.marker; ctx.lineWidth = 1; ctx.strokeRect(bx, by, barW, barH);
+}
+
+/* =========================================================
+   ИНТРО
+   ========================================================= */
+const INTRO_TEXTS = [
+  'Славянская община платит дань Хазарскому каганату и отдельно — «дань мёртвым»: подношения на курганах, чтобы духи не гневались. Но подношения кто-то забирает: люди наместника, под видом нечисти.',
+  'Духи обижены — пропадают люди, дохнет скот, рыбаки бредят о мёртвых девицах на озере.',
+  'Старейшина Любомир знает правду, но боится войны и требует молчать; жрица Мораны Веда хочет дойти до наместника и требует доказательств. Ты — Ярослав, бывший дружинник. Тебе решать: мир любой ценой или правда через кровь.'
+];
+
+const INTRO_VISUALS = [
+  `<div style="position:relative; width:240px; height:170px; margin:0 auto;">
+    <div style="position:absolute; left:30px; bottom:20px; width:80px; height:60px; background:#8B5A2B; border:3px solid #2B1B12;"></div>
+    <div style="position:absolute; left:30px; bottom:76px; width:80px; height:18px; background:#6B4519; border:3px solid #2B1B12;"></div>
+    <div style="position:absolute; right:20px; bottom:30px; width:55px; height:55px; border-radius:50%; background:#D9A441; border:3px solid #2B1B12;"></div>
+    <div style="position:absolute; left:50%; top:15px; transform:translateX(-50%); width:8px; height:50px; background:#1A1824; border:2px solid #2B1B12;"></div>
+    <div style="position:absolute; left:38%; top:35px; width:24px; height:40px; background:#1A1824; border:2px solid #2B1B12; transform:rotate(15deg);"></div>
+  </div>`,
+  `<div style="position:relative; width:240px; height:170px; margin:0 auto;">
+    <div style="position:absolute; left:15px; top:35px; width:50px; height:80px; background:rgba(242,228,201,0.18); border:2px solid #D9A441; border-radius:25px 25px 15px 15px;"></div>
+    <div style="position:absolute; left:65px; top:10px; width:60px; height:100px; background:rgba(242,228,201,0.18); border:2px solid #D9A441; border-radius:30px 30px 20px 20px;"></div>
+    <div style="position:absolute; right:15px; top:35px; width:50px; height:80px; background:rgba(242,228,201,0.18); border:2px solid #D9A441; border-radius:25px 25px 15px 15px;"></div>
+    <div style="position:absolute; right:30px; bottom:15px; width:12px; height:12px; border-radius:50%; background:#A63A2A;"></div>
+    <div style="position:absolute; right:55px; bottom:25px; width:8px; height:8px; border-radius:50%; background:#A63A2A;"></div>
+  </div>`,
+  `<div style="position:relative; width:240px; height:170px; margin:0 auto;">
+    <div style="position:absolute; left:0; top:0; width:33%; height:100%; border-right:2px solid #D9A441;">
+      <div style="position:absolute; left:50%; top:40px; transform:translateX(-50%); width:30px; height:80px; background:#8B5A2B; border:3px solid #2B1B12; border-radius:15px 15px 4px 4px;"></div>
+      <div style="position:absolute; left:50%; top:30px; transform:translateX(-50%); width:22px; height:22px; border-radius:50%; background:#F2C9A0; border:2px solid #2B1B12;"></div>
+    </div>
+    <div style="position:absolute; left:33.5%; top:0; width:33%; height:100%; border-right:2px solid #D9A441;">
+      <div style="position:absolute; left:50%; top:40px; transform:translateX(-50%); width:30px; height:80px; background:#5E7A3A; border:3px solid #2B1B12; border-radius:15px 15px 4px 4px;"></div>
+      <div style="position:absolute; left:50%; top:30px; transform:translateX(-50%); width:22px; height:22px; border-radius:50%; background:#F2C9A0; border:2px solid #2B1B12;"></div>
+    </div>
+    <div style="position:absolute; left:67%; top:0; width:33%; height:100%;">
+      <div style="position:absolute; left:50%; top:40px; transform:translateX(-50%); width:30px; height:80px; background:#A63A2A; border:3px solid #2B1B12; border-radius:15px 15px 4px 4px;"></div>
+      <div style="position:absolute; left:50%; top:30px; transform:translateX(-50%); width:22px; height:22px; border-radius:50%; background:#F2C9A0; border:2px solid #2B1B12;"></div>
+    </div>
+  </div>`
+];
+
+function showIntro(step) {
+  G.introStep = step;
+  document.getElementById('intro-step-lbl').textContent = `ПРЕДЫСТОРИЯ · ${step+1} / 3`;
+  document.getElementById('intro-visual').innerHTML = INTRO_VISUALS[step];
+  document.getElementById('intro-text').textContent = INTRO_TEXTS[step];
+  document.getElementById('intro').classList.remove('hidden');
+  document.getElementById('btn-intro-next').textContent = step < 2 ? 'ДАЛЕЕ' : 'НАЧАТЬ';
+}
+
+/* =========================================================
+   ТУТОРИАЛ
+   ========================================================= */
+const TUTORIAL_HINTS = [
+  'WASD — двигаться. E — взаимодействовать.',
+  'В диалоге можно говорить правду или ложь. Тон меняет отношение NPC.',
+  'Подойди к выходу, чтобы перейти в другую локацию.',
+  'Предметы можно складывать в инвентарь.',
+  'Твой выбор влияет на финал. Но правильного ответа нет.'
+];
+
+function showTutorialStep() {
+  G.tutorialActive = true;
+  document.getElementById('tut-text').textContent = TUTORIAL_HINTS[G.tutorialStep];
+  document.getElementById('tut-counter').textContent = `${G.tutorialStep+1} / ${TUTORIAL_HINTS.length}`;
+  document.getElementById('tutorial-panel').classList.remove('hidden');
+}
+
+document.getElementById('tut-close').onclick = () => {
+  SFX.click();
+  G.tutorialStep++;
+  if (G.tutorialStep >= TUTORIAL_HINTS.length) {
+    G.tutorialActive = false;
+    document.getElementById('tutorial-panel').classList.add('hidden');
+  } else {
+    showTutorialStep();
+  }
+};
+
+/* =========================================================
+   КНОПКИ
+   ========================================================= */
+document.getElementById('btn-play').onclick = () => {
+  initAudio();
+  SFX.click();
+  document.getElementById('menu').classList.add('hidden');
+  G.scene = 'intro';
+  showIntro(0);
+};
+
+document.getElementById('btn-intro-next').onclick = () => {
+  SFX.click();
+  if (G.introStep < 2) {
+    showIntro(G.introStep + 1);
+  } else {
+    document.getElementById('intro').classList.add('hidden');
+    G.scene = 'playing';
+    G.tutorialStep = 0;
+    showTutorialStep();
+    showLocationName('ДЕРЕВНЯ');
+    setAmbientMood(55);
+  }
+};
+
+/* =========================================================
+   ИГРОВОЙ ЦИКЛ
+   ========================================================= */
+function loop(t) {
+  const dt = Math.min(0.05, (t - G.lastTime) / 1000 || 0);
+  G.lastTime = t;
+  update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+
+G.lastTime = performance.now();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

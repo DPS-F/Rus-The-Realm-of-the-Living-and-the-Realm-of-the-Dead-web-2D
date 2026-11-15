@@ -1,1 +1,2 @@
-# Rus-The-Realm-of-the-Living-and-the-Realm-of-the-Dead-web-2D
+# Русь: Явь и Навь
+# Веб-прототип в 2Д
